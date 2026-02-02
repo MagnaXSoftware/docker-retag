@@ -5,7 +5,9 @@ before:
     - go mod tidy
 
 builds:
-  - goarch:
+  - env:
+      - CGO_ENABLED=0
+    goarch:
       - '386'
       - amd64
       - arm
@@ -22,3 +24,28 @@ builds:
         goarch: arm
     ldflags: '-s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.CommitDate}} -X main.builtBy=goreleaser'
     mod_timestamp: "{{ .CommitTimestamp }}"
+
+dockers_v2:
+  - images:
+      - "ghcr.io/magnaxsoftware/docker-retag"
+    tags:
+      - "v{{ .Version }}"
+      - "{{ if not .IsNightly }}latest{{ end }}"
+    labels:
+      "org.opencontainers.image.authors": "MagnaX Software"
+      "org.opencontainers.image.vendor": "MagnaX Software"
+      "org.opencontainers.image.title": "docker-retag"
+      "org.opencontainers.image.description": "Re-tag docker/OCI images without downloading the whole image"
+      "org.opencontainers.image.created": "{{.CommitDate}}"
+      "org.opencontainers.image.revision": "{{.FullCommit}}"
+      "org.opencontainers.image.version": "{{.Version}}"
+      "org.opencontainers.image.source": "{{.GitURL}}"
+      "org.opencontainers.image.url":  "{{.GitURL}}"
+      "org.opencontainers.image.documentation":  "{{.GitURL}}"
+      "org.opencontainers.image.licenses": "MIT"
+    platforms:
+      - linux/386
+      - linux/amd64
+      - linux/arm/v6
+      - linux/arm/v7
+      - linux/arm64

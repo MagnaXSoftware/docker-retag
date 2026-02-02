@@ -27,12 +27,7 @@ $ go get -u github.com/MagnaXSoftware/docker-retag
 
 ### Precompiled binary
 
-Alternatively, you can download a static Linux [release][github-release-link] binary by running:
-
-```bash
-$ wget -q https://github.com/MagnaXSoftware/docker-retag/releases/download/latest/docker-retag
-$ sudo install docker-retag /usr/bin
-```
+Alternatively, you can download a static [release][github-release-link] binary.
 
 ## Usage
 

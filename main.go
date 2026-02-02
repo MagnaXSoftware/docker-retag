@@ -7,7 +7,6 @@ package main
 import (
 	"bytes"
 	"docker-retag/arguments"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -65,6 +64,15 @@ func mainCmd(args []string) error {
 	return nil
 }
 
+type HttpError struct {
+	Status string
+	URL    string
+}
+
+func (h HttpError) Error() string {
+	return fmt.Sprintf("HTTP %s when accessing %q", h.Status, h.URL)
+}
+
 type Registry struct {
 	URL    string
 	Client *http.Client
@@ -114,7 +122,7 @@ func (r *Registry) ReTag(repo, oldTag, newTag string) error {
 	}(sourceResp.Body)
 
 	if sourceResp.StatusCode != http.StatusOK {
-		return errors.New(sourceResp.Status)
+		return HttpError{sourceResp.Status, sourceUrl}
 	}
 
 	manifest, err := io.ReadAll(sourceResp.Body)
@@ -138,7 +146,7 @@ func (r *Registry) ReTag(repo, oldTag, newTag string) error {
 	}(destResp.Body)
 
 	if destResp.StatusCode != http.StatusCreated {
-		return errors.New(destResp.Status)
+		return HttpError{destResp.Status, destUrl}
 	}
 
 	return nil
