@@ -1,4 +1,3 @@
-[![CircleCI][circleci-badge]][circleci-link]
 [![Go Report Card][go-report-card-badge]][go-report-card-link]
 [![License][license-badge]][license-link]
 [![Github downloads][github-downloads-badge]][github-release-link]
@@ -14,7 +13,7 @@ There are certain situation where it is desirable to give an existing Docker ima
 
 That approach has the downside of downloading the contents of every layer from Docker Hub, which has bandwidth and performance implications, especially in a CI environment.
 
-This tool uses the [Docker Hub API](https://docs.docker.com/registry/spec/api/) to pull and push only a tiny [manifest](https://docs.docker.com/registry/spec/manifest-v2-2/) of the layers, bypassing the download overhead. Using this approach, an image of any size can be retagged in approximately 2 seconds.
+This tool uses the [Docker Registry API][docker-registry-api] to pull and push only a tiny [manifest](https://docs.docker.com/registry/spec/manifest-v2-2/) of the layers, bypassing the download overhead. Using this approach, an image of any size can be retagged in approximately 2 seconds.
 
 ## Installing
 
@@ -23,7 +22,7 @@ This tool uses the [Docker Hub API](https://docs.docker.com/registry/spec/api/) 
 You can use `go get` to install this tool by running:
 
 ```bash
-$ go get -u github.com/joshdk/docker-retag
+$ go get -u github.com/MagnaXSoftware/docker-retag
 ```
 
 ### Precompiled binary
@@ -31,7 +30,7 @@ $ go get -u github.com/joshdk/docker-retag
 Alternatively, you can download a static Linux [release][github-release-link] binary by running:
 
 ```bash
-$ wget -q https://github.com/joshdk/docker-retag/releases/download/0.0.2/docker-retag
+$ wget -q https://github.com/MagnaXSoftware/docker-retag/releases/download/latest/docker-retag
 $ sudo install docker-retag /usr/bin
 ```
 
@@ -39,7 +38,7 @@ $ sudo install docker-retag /usr/bin
 
 ### Setup
 
-Since `docker-retag` communicates with the [Docker Hub](https://hub.docker.com/) API, you must first export your account credentials into the working environment. These are the same credentials that you would use during `docker login`.
+Since `docker-retag` communicates with any [Docker Registry][docker-registry-api] API, you must first export your account credentials into the working environment. These are the same credentials that you would use during `docker login`.
 
 ```bash
 $ export DOCKER_USER='joshdk'
@@ -47,6 +46,15 @@ $ export DOCKER_PASS='hunter2'
 ```
 
 The credentials must have both pull and push access for the Docker repository you are retagging.
+
+
+If you wish to use a third-party registry (not Docker Hub), set the `DOCKER_REGISTRY` environment variable:
+
+```bash
+$ export DOCKER_REGISTRY='https://url.of.my.registry/'
+```
+
+Make sure to include the trailing `/` in the url of the registry.
 
 ### Examples
 
@@ -87,19 +95,18 @@ $ docker-retag joshdk/hello-world @sha256:933f...3e90 1.0.1
   Retagged joshdk/hello-world@sha256:933f...3e90 as joshdk/hello-world:1.0.1
 ```
 
-In all cases, the image and source reference **must** already exist in Docker Hub.
+In all cases, the image and source reference **must** already exist in the docker registry.
 
 ## License
 
 This library is distributed under the [MIT License][license-link], see [LICENSE.txt][license-file] for more information.
 
-[circleci-badge]:         https://circleci.com/gh/joshdk/docker-retag.svg?&style=shield
-[circleci-link]:          https://circleci.com/gh/joshdk/docker-retag/tree/master
-[github-downloads-badge]: https://img.shields.io/github/downloads/joshdk/docker-retag/total.svg
-[github-release-badge]:   https://img.shields.io/github/release/joshdk/docker-retag.svg
-[github-release-link]:    https://github.com/joshdk/docker-retag/releases/latest
-[go-report-card-badge]:   https://goreportcard.com/badge/github.com/joshdk/docker-retag
-[go-report-card-link]:    https://goreportcard.com/report/github.com/joshdk/docker-retag
-[license-badge]:          https://img.shields.io/github/license/joshdk/docker-retag.svg
-[license-file]:           https://github.com/joshdk/docker-retag/blob/master/LICENSE.txt
+[github-downloads-badge]: https://img.shields.io/github/downloads/MagnaXSoftware/docker-retag/total.svg
+[github-release-badge]:   https://img.shields.io/github/release/MagnaXSoftware/docker-retag.svg
+[github-release-link]:    https://github.com/MagnaXSoftware/docker-retag/releases/latest
+[go-report-card-badge]:   https://goreportcard.com/badge/github.com/MagnaXSoftware/docker-retag
+[go-report-card-link]:    https://goreportcard.com/report/github.com/MagnaXSoftware/docker-retag
+[license-badge]:          https://img.shields.io/github/license/MagnaXSoftware/docker-retag.svg
+[license-file]:           https://github.com/MagnaXSoftware/docker-retag/blob/master/LICENSE.txt
 [license-link]:           https://opensource.org/licenses/MIT
+[docker-registry-api]:    https://docs.docker.com/reference/api/registry/latest/#tag/overview

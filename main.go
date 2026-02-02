@@ -6,60 +6,53 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
+	"docker-retag/arguments"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 
-	"github.com/joshdk/docker-retag/arguments"
 	"strings"
 )
 
 const (
+	dockerRegistryEnv = "DOCKER_REGISTRY"
 	dockerUsernameEnv = "DOCKER_USER"
 	dockerPasswordEnv = "DOCKER_PASS"
+
+	defaultRegistry = "https://index.docker.io/"
+
+	dockerManifestV2MIME = "application/vnd.docker.distribution.manifest.v2+json"
 )
 
 func main() {
 	if err := mainCmd(os.Args); err != nil {
-		fmt.Fprintf(os.Stderr, "docker-retag: %s\n", err.Error())
+		_, _ = fmt.Fprintf(os.Stderr, "docker-retag: %s\n", err.Error())
 		os.Exit(1)
 	}
 }
 
 func mainCmd(args []string) error {
-	var (
-		repository, oldTag, newTag, err = arguments.Parse(args[1:])
-	)
-
+	repository, oldTag, newTag, err := arguments.Parse(args[1:])
 	if err != nil {
 		return err
 	}
 
-	username, found := os.LookupEnv(dockerUsernameEnv)
-	if !found {
-		return errors.New(dockerUsernameEnv + " not found in environment")
+	// allow empty username/passowrd
+	username, _ := os.LookupEnv(dockerUsernameEnv)
+	password, _ := os.LookupEnv(dockerPasswordEnv)
+
+	registryUrl, found := os.LookupEnv(dockerRegistryEnv)
+	if !found || registryUrl == "" {
+		registryUrl = defaultRegistry
 	}
 
-	password, found := os.LookupEnv(dockerPasswordEnv)
-	if !found {
-		return errors.New(dockerPasswordEnv + " not found in environment")
-	}
+	reg := NewRegistry(registryUrl, username, password)
 
-	token, err := login(repository, username, password)
+	err = reg.ReTag(repository, oldTag, newTag)
 	if err != nil {
-		return errors.New("failed to authenticate: " + err.Error())
-	}
-
-	manifest, err := pullManifest(token, repository, oldTag)
-	if err != nil {
-		return errors.New("failed to pull manifest: " + err.Error())
-	}
-
-	if err := pushManifest(token, repository, newTag, manifest); err != nil {
-		return errors.New("failed to push manifest: " + err.Error())
+		return err
 	}
 
 	separator := ":"
@@ -72,101 +65,80 @@ func mainCmd(args []string) error {
 	return nil
 }
 
-func login(repo string, username string, password string) (string, error) {
-	var (
-		client = http.DefaultClient
-		url    = "https://auth.docker.io/token?service=registry.docker.io&scope=repository:" + repo + ":pull,push"
-	)
-
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return "", err
-	}
-
-	req.SetBasicAuth(username, password)
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return "", errors.New(resp.Status)
-	}
-
-	bodyText, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-	}
-
-	var data struct {
-		Details string `json:"details"`
-		Token   string `json:"token"`
-	}
-
-	if err := json.Unmarshal(bodyText, &data); err != nil {
-		return "", err
-	}
-
-	if data.Token == "" {
-		return "", errors.New("empty token")
-	}
-
-	return data.Token, nil
+type Registry struct {
+	URL    string
+	Client *http.Client
 }
 
-func pullManifest(token string, repository string, tag string) ([]byte, error) {
-	var (
-		client = http.DefaultClient
-		url    = "https://index.docker.io/v2/" + repository + "/manifests/" + tag
-	)
-
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
+func NewRegistry(url, username, password string) *Registry {
+	authTransport := &basicAuthTransport{
+		Wrapped: &tokenAuthTransport{
+			Wrapped:  http.DefaultTransport,
+			Username: username,
+			Password: password,
+		},
+		URL:      url,
+		Username: username,
+		Password: password,
+	}
+	r := Registry{
+		url,
+		&http.Client{
+			Transport: authTransport,
+		},
 	}
 
-	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("Accept", "application/vnd.docker.distribution.manifest.v2+json")
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New(resp.Status)
-	}
-
-	bodyText, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	return bodyText, nil
+	return &r
 }
 
-func pushManifest(token string, repository string, tag string, manifest []byte) error {
-	var (
-		client = http.DefaultClient
-		url    = "https://index.docker.io/v2/" + repository + "/manifests/" + tag
-	)
+func (r *Registry) url(pathTemplate string, args ...interface{}) string {
+	pathSuffix := fmt.Sprintf(pathTemplate, args...)
+	url := fmt.Sprintf("%s%s", r.URL, pathSuffix)
+	return url
+}
 
-	req, err := http.NewRequest("PUT", url, bytes.NewBuffer(manifest))
+func (r *Registry) ReTag(repo, oldTag, newTag string) error {
+	sourceUrl := r.url("/v2/%s/manifests/%s", repo, oldTag)
+	sourceReq, err := http.NewRequest("GET", sourceUrl, nil)
 	if err != nil {
 		return err
 	}
 
-	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("Content-type", "application/vnd.docker.distribution.manifest.v2+json")
+	sourceReq.Header.Set("Accept", dockerManifestV2MIME)
+	sourceResp, err := r.Client.Do(sourceReq)
+	if err != nil {
+		return err
+	}
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(sourceResp.Body)
 
-	resp, err := client.Do(req)
+	if sourceResp.StatusCode != http.StatusOK {
+		return errors.New(sourceResp.Status)
+	}
+
+	manifest, err := io.ReadAll(sourceResp.Body)
 	if err != nil {
 		return err
 	}
 
-	if resp.StatusCode != http.StatusCreated {
-		return errors.New(resp.Status)
+	destUrl := r.url("/v2/%s/manifests/%s", repo, newTag)
+	destReq, err := http.NewRequest("PUT", destUrl, bytes.NewBuffer(manifest))
+	if err != nil {
+		return err
+	}
+
+	sourceReq.Header.Set("Content-Type", dockerManifestV2MIME)
+	destResp, err := r.Client.Do(destReq)
+	if err != nil {
+		return err
+	}
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(destResp.Body)
+
+	if destResp.StatusCode != http.StatusCreated {
+		return errors.New(destResp.Status)
 	}
 
 	return nil
