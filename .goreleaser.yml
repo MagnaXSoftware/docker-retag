@@ -43,6 +43,18 @@ dockers_v2:
       "org.opencontainers.image.url":  "{{.GitURL}}"
       "org.opencontainers.image.documentation":  "{{.GitURL}}"
       "org.opencontainers.image.licenses": "MIT"
+    annotations:
+      "org.opencontainers.image.authors": "MagnaX Software"
+      "org.opencontainers.image.vendor": "MagnaX Software"
+      "org.opencontainers.image.title": "docker-retag"
+      "org.opencontainers.image.description": "Re-tag docker/OCI images without downloading the whole image"
+      "org.opencontainers.image.created": "{{.CommitDate}}"
+      "org.opencontainers.image.revision": "{{.FullCommit}}"
+      "org.opencontainers.image.version": "{{.Version}}"
+      "org.opencontainers.image.source": "{{.GitURL}}"
+      "org.opencontainers.image.url":  "{{.GitURL}}"
+      "org.opencontainers.image.documentation":  "{{.GitURL}}"
+      "org.opencontainers.image.licenses": "MIT"
     platforms:
       - linux/386
       - linux/amd64
