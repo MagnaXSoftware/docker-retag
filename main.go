@@ -23,6 +23,9 @@ const (
 	defaultRegistry = "https://index.docker.io/"
 
 	dockerManifestV2MIME = "application/vnd.docker.distribution.manifest.v2+json"
+	dockerManifestListV2MIME = "application/vnd.docker.distribution.manifest.list.v2+json"
+	ociManifestV1MIME = "application/vnd.oci.image.manifest.v1+json"
+	ociIndexV1MIME = "application/vnd.oci.image.index.v1+json"
 )
 
 func main() {
@@ -112,7 +115,7 @@ func (r *Registry) ReTag(repo, oldTag, newTag string) error {
 		return err
 	}
 
-	sourceReq.Header.Set("Accept", dockerManifestV2MIME)
+	sourceReq.Header.Set("Accept", strings.Join([]string{ociManifestV1MIME, ociIndexV1MIME,dockerManifestListV2MIME, dockerManifestV2MIME}, ", "))
 	sourceResp, err := r.Client.Do(sourceReq)
 	if err != nil {
 		return err
@@ -125,6 +128,8 @@ func (r *Registry) ReTag(repo, oldTag, newTag string) error {
 		return HttpError{sourceResp.Status, sourceUrl}
 	}
 
+	receivedMIME := sourceResp.Header.Get("Content-Type")
+
 	manifest, err := io.ReadAll(sourceResp.Body)
 	if err != nil {
 		return err
@@ -136,7 +141,7 @@ func (r *Registry) ReTag(repo, oldTag, newTag string) error {
 		return err
 	}
 
-	sourceReq.Header.Set("Content-Type", dockerManifestV2MIME)
+	destReq.Header.Set("Content-Type", receivedMIME)
 	destResp, err := r.Client.Do(destReq)
 	if err != nil {
 		return err
