@@ -20,7 +20,7 @@ const (
 	dockerUsernameEnv = "DOCKER_USER"
 	dockerPasswordEnv = "DOCKER_PASS"
 
-	defaultRegistry = "https://index.docker.io/"
+	defaultRegistry = "https://index.docker.io"
 
 	dockerManifestV2MIME = "application/vnd.docker.distribution.manifest.v2+json"
 	dockerManifestListV2MIME = "application/vnd.docker.distribution.manifest.list.v2+json"
@@ -48,6 +48,10 @@ func mainCmd(args []string) error {
 	registryUrl, found := os.LookupEnv(dockerRegistryEnv)
 	if !found || registryUrl == "" {
 		registryUrl = defaultRegistry
+	}
+	if !strings.HasPrefix(registryUrl, "http://") && !strings.HasPrefix(registryUrl, "https://") {
+		// automatically add https scheme if no scheme is present
+		registryUrl = "https://" + registryUrl
 	}
 
 	reg := NewRegistry(registryUrl, username, password)
