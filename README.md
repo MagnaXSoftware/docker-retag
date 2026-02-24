@@ -49,13 +49,13 @@ If you wish to use a third-party registry (not Docker Hub), set the `DOCKER_REGI
 $ export DOCKER_REGISTRY='https://url.of.my.registry/'
 ```
 
-Make sure to include the trailing `/` in the url of the registry.
-
 ### Examples
 
 This tool can be used in a few simple ways. The simplest of which is using a
 source image reference (similar to anything you could pass to `docker tag`) and
 a target tag.
+
+In all cases, the image and source reference **must** already exist in the docker registry.
 
 ##### Referencing a source image by tag name.
 
@@ -78,6 +78,8 @@ $ docker-retag joshdk/hello-world 1.0.1
   Retagged joshdk/hello-world:latest as joshdk/hello-world:1.0.1
 ```
 
+#### Separate arguments
+
 Additionally, you can pass the image name, source reference, and target tag as seperate arguments.
 
 ```bash
@@ -90,7 +92,16 @@ $ docker-retag joshdk/hello-world @sha256:933f...3e90 1.0.1
   Retagged joshdk/hello-world@sha256:933f...3e90 as joshdk/hello-world:1.0.1
 ```
 
-In all cases, the image and source reference **must** already exist in the docker registry.
+#### Registry URL
+
+You can also include the registry in the image name reference, it will get stripped automatically.
+
+```bash
+$ docker-retag docker.io/joshdk/hello-world 1.0.1
+  Retagged joshdk/hello-world:latest as joshdk/hello-world:1.0.1
+```
+
+Note that including the registry url in the image reference will not change the registry that docker-retag will connect to. If the registry url is present, it must match the `DOCKER_REGISTRY` environment variable.
 
 ## License
 
