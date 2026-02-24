@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 
@@ -50,10 +51,15 @@ func mainCmd(args []string) error {
 		registryUrl = "https://" + registryUrl
 	}
 
+	regUrl, err := url.Parse(registryUrl)
+	if err != nil {
+		return err
+	}
 	prog_args := args[1:]
 	if len(prog_args) < 2 {
 		return errors.New("Not enough arguments provided, 2 or 3 arguments are required")
 	}
+	prog_args[0] = strings.TrimPrefix(prog_args[0], regUrl.Host+"/")
 
 	repository, oldTag, newTag, err := arguments.Parse(prog_args)
 	if err != nil {
@@ -125,7 +131,7 @@ func (r *Registry) ReTag(repo, oldTag, newTag string) error {
 		return err
 	}
 
-	sourceReq.Header.Set("Accept", strings.Join([]string{ociManifestV1MIME, ociIndexV1MIME,dockerManifestListV2MIME, dockerManifestV2MIME}, ", "))
+	sourceReq.Header.Set("Accept", strings.Join([]string{ociManifestV1MIME, ociIndexV1MIME, dockerManifestListV2MIME, dockerManifestV2MIME}, ", "))
 	sourceResp, err := r.Client.Do(sourceReq)
 	if err != nil {
 		return err
