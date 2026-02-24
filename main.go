@@ -118,7 +118,7 @@ func NewRegistry(url, username, password string) *Registry {
 	return &r
 }
 
-func (r *Registry) url(pathTemplate string, args ...interface{}) string {
+func (r *Registry) url(pathTemplate string, args ...any) string {
 	pathSuffix := fmt.Sprintf(pathTemplate, args...)
 	url := fmt.Sprintf("%s%s", r.URL, pathSuffix)
 	return url
