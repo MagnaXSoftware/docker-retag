@@ -29,6 +29,10 @@ $ go get -u github.com/MagnaXSoftware/docker-retag
 
 Alternatively, you can download a static [release][github-release-link] binary.
 
+### Docker image
+
+You can also download a [docker image][docker-release-link].
+
 ## Usage
 
 ### Setup
@@ -116,3 +120,4 @@ This library is distributed under the [MIT License][license-link], see [LICENSE.
 [license-file]:           https://github.com/MagnaXSoftware/docker-retag/blob/master/LICENSE.txt
 [license-link]:           https://opensource.org/licenses/MIT
 [docker-registry-api]:    https://docs.docker.com/reference/api/registry/latest/#tag/overview
+[docker-release-link]:    https://github.com/MagnaXSoftware/docker-retag/pkgs/container/docker-retag
