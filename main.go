@@ -6,13 +6,14 @@ package main
 
 import (
 	"bytes"
-	"docker-retag/arguments"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
-
 	"strings"
+
+	"docker-retag/arguments"
 )
 
 const (
@@ -22,10 +23,10 @@ const (
 
 	defaultRegistry = "https://index.docker.io"
 
-	dockerManifestV2MIME = "application/vnd.docker.distribution.manifest.v2+json"
+	dockerManifestV2MIME     = "application/vnd.docker.distribution.manifest.v2+json"
 	dockerManifestListV2MIME = "application/vnd.docker.distribution.manifest.list.v2+json"
-	ociManifestV1MIME = "application/vnd.oci.image.manifest.v1+json"
-	ociIndexV1MIME = "application/vnd.oci.image.index.v1+json"
+	ociManifestV1MIME        = "application/vnd.oci.image.manifest.v1+json"
+	ociIndexV1MIME           = "application/vnd.oci.image.index.v1+json"
 )
 
 func main() {
@@ -36,11 +37,6 @@ func main() {
 }
 
 func mainCmd(args []string) error {
-	repository, oldTag, newTag, err := arguments.Parse(args[1:])
-	if err != nil {
-		return err
-	}
-
 	// allow empty username/passowrd
 	username, _ := os.LookupEnv(dockerUsernameEnv)
 	password, _ := os.LookupEnv(dockerPasswordEnv)
@@ -52,6 +48,16 @@ func mainCmd(args []string) error {
 	if !strings.HasPrefix(registryUrl, "http://") && !strings.HasPrefix(registryUrl, "https://") {
 		// automatically add https scheme if no scheme is present
 		registryUrl = "https://" + registryUrl
+	}
+
+	prog_args := args[1:]
+	if len(prog_args) < 2 {
+		return errors.New("Not enough arguments provided, 2 or 3 arguments are required")
+	}
+
+	repository, oldTag, newTag, err := arguments.Parse(prog_args)
+	if err != nil {
+		return err
 	}
 
 	reg := NewRegistry(registryUrl, username, password)
